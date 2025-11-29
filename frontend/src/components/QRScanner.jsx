@@ -1,0 +1,107 @@
+import { useEffect, useRef, useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
+import './QRScanner.css';
+
+const QRScanner = ({ onScan, scannedCount }) => {
+  const scannerRef = useRef(null);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastScanned, setLastScanned] = useState(null);
+  const html5QrcodeRef = useRef(null);
+
+  useEffect(() => {
+    startScanner();
+
+    return () => {
+      stopScanner();
+    };
+  }, []);
+
+  const startScanner = async () => {
+    try {
+      const html5QrCode = new Html5Qrcode('qr-reader');
+      html5QrcodeRef.current = html5QrCode;
+
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0,
+      };
+
+      await html5QrCode.start(
+        { facingMode: 'environment' },
+        config,
+        onScanSuccess,
+        onScanError
+      );
+
+      setScanning(true);
+      setError(null);
+    } catch (err) {
+      console.error('Scanner error:', err);
+      setError('Unable to access camera. Please grant camera permissions.');
+    }
+  };
+
+  const stopScanner = async () => {
+    if (html5QrcodeRef.current && scanning) {
+      try {
+        await html5QrcodeRef.current.stop();
+        html5QrcodeRef.current.clear();
+      } catch (err) {
+        console.error('Error stopping scanner:', err);
+      }
+    }
+  };
+
+  const onScanSuccess = (decodedText, decodedResult) => {
+    // Prevent duplicate scans within 2 seconds
+    if (lastScanned === decodedText) return;
+
+    setLastScanned(decodedText);
+    onScan(decodedText);
+
+    // Reset after 2 seconds to allow rescanning
+    setTimeout(() => {
+      setLastScanned(null);
+    }, 2000);
+  };
+
+  const onScanError = (errorMessage) => {
+    // Ignore scan errors (they happen continuously when no QR code is detected)
+  };
+
+  return (
+    <div className="qr-scanner">
+      <div className="scanner-container">
+        {error ? (
+          <div className="scanner-error">
+            <p>{error}</p>
+            <button onClick={startScanner} className="btn btn-primary">
+              Retry
+            </button>
+          </div>
+        ) : (
+          <>
+            <div id="qr-reader" ref={scannerRef}></div>
+            <div className="scanner-overlay">
+              <div className="scan-frame"></div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="scanner-info">
+        <div className="info-card">
+          <p className="info-label">Scanned QR Codes</p>
+          <p className="info-value">{scannedCount}</p>
+        </div>
+        <p className="text-secondary text-center">
+          Point your camera at a QR code to scan
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default QRScanner;

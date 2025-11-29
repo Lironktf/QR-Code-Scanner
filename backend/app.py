@@ -1,0 +1,298 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
+import os
+from dotenv import load_dotenv
+from services.groq_service import GroqService
+
+load_dotenv()
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
+
+CORS(app)
+jwt = JWTManager(app)
+
+# In-memory user storage (replace with database in production)
+users = {}
+
+# In-memory event and QR code storage (replace with database in production)
+events_store = {}
+qr_codes_store = {}
+
+# Initialize Groq service
+groq_service = GroqService()
+
+# ============= Authentication Routes =============
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password required'}), 400
+
+    if email in users:
+        return jsonify({'error': 'User already exists'}), 400
+
+    users[email] = {
+        'email': email,
+        'password': generate_password_hash(password),
+        'events': []
+    }
+
+    access_token = create_access_token(identity=email)
+    return jsonify({'token': access_token, 'email': email}), 201
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login user"""
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password required'}), 400
+
+    user = users.get(email)
+    if not user or not check_password_hash(user['password'], password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    access_token = create_access_token(identity=email)
+    return jsonify({'token': access_token, 'email': email}), 200
+
+# ============= Event Routes =============
+
+@app.route('/api/events', methods=['GET'])
+@jwt_required()
+def get_events():
+    """Get all events for the current user"""
+    current_user = get_jwt_identity()
+    user_events = users.get(current_user, {}).get('events', [])
+
+    events = []
+    for event_id in user_events:
+        if event_id in events_store:
+            event = events_store[event_id]
+            # Count QR codes for this event
+            qr_count = len([qr for qr in qr_codes_store.values() if qr.get('event_id') == event_id])
+            events.append({
+                **event,
+                'qr_count': qr_count
+            })
+
+    return jsonify({'events': events}), 200
+
+@app.route('/api/events', methods=['POST'])
+@jwt_required()
+def create_event():
+    """Create a new event"""
+    current_user = get_jwt_identity()
+    data = request.get_json()
+
+    event_name = data.get('name')
+    if not event_name:
+        return jsonify({'error': 'Event name required'}), 400
+
+    import uuid
+    from datetime import datetime
+
+    event_id = str(uuid.uuid4())
+    event = {
+        'id': event_id,
+        'name': event_name,
+        'created_at': datetime.utcnow().isoformat(),
+        'user_email': current_user
+    }
+
+    events_store[event_id] = event
+
+    if current_user not in users:
+        users[current_user] = {'email': current_user, 'events': []}
+    users[current_user]['events'].append(event_id)
+
+    return jsonify({'event': {**event, 'qr_count': 0}}), 201
+
+@app.route('/api/events/<event_id>', methods=['DELETE'])
+@jwt_required()
+def delete_event(event_id):
+    """Delete an event"""
+    current_user = get_jwt_identity()
+
+    if event_id not in events_store:
+        return jsonify({'error': 'Event not found'}), 404
+
+    event = events_store[event_id]
+    if event.get('user_email') != current_user:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    # Delete all QR codes for this event
+    qr_ids_to_delete = [qr_id for qr_id, qr in qr_codes_store.items() if qr.get('event_id') == event_id]
+    for qr_id in qr_ids_to_delete:
+        del qr_codes_store[qr_id]
+
+    # Remove event
+    del events_store[event_id]
+    users[current_user]['events'].remove(event_id)
+
+    return jsonify({'message': 'Event deleted'}), 200
+
+# ============= QR Code Routes =============
+
+@app.route('/api/events/<event_id>/qrcodes', methods=['GET'])
+@jwt_required()
+def get_qr_codes(event_id):
+    """Get all QR codes for an event"""
+    current_user = get_jwt_identity()
+
+    if event_id not in events_store:
+        return jsonify({'error': 'Event not found'}), 404
+
+    event = events_store[event_id]
+    if event.get('user_email') != current_user:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    qr_codes = [qr for qr in qr_codes_store.values() if qr.get('event_id') == event_id]
+    return jsonify({'qr_codes': qr_codes}), 200
+
+@app.route('/api/events/<event_id>/qrcodes', methods=['POST'])
+@jwt_required()
+def add_qr_code(event_id):
+    """Add a new QR code to an event"""
+    current_user = get_jwt_identity()
+    data = request.get_json()
+
+    if event_id not in events_store:
+        return jsonify({'error': 'Event not found'}), 404
+
+    event = events_store[event_id]
+    if event.get('user_email') != current_user:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    content = data.get('content')
+    if not content:
+        return jsonify({'error': 'QR code content required'}), 400
+
+    # Check for duplicates
+    existing_qr = next((qr for qr in qr_codes_store.values()
+                       if qr.get('event_id') == event_id and qr.get('content') == content), None)
+    if existing_qr:
+        return jsonify({'error': 'Duplicate QR code', 'qr_code': existing_qr}), 409
+
+    import uuid
+    from datetime import datetime
+
+    qr_id = str(uuid.uuid4())
+    qr_code = {
+        'id': qr_id,
+        'event_id': event_id,
+        'content': content,
+        'scanned_at': datetime.utcnow().isoformat(),
+        'processed': False,
+        'category': None,
+        'summary': None
+    }
+
+    qr_codes_store[qr_id] = qr_code
+
+    return jsonify({'qr_code': qr_code}), 201
+
+@app.route('/api/events/<event_id>/qrcodes/process', methods=['POST'])
+@jwt_required()
+def process_qr_codes(event_id):
+    """Process unprocessed QR codes with Groq AI"""
+    current_user = get_jwt_identity()
+
+    if event_id not in events_store:
+        return jsonify({'error': 'Event not found'}), 404
+
+    event = events_store[event_id]
+    if event.get('user_email') != current_user:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    # Get unprocessed QR codes
+    unprocessed_qr_codes = [qr for qr in qr_codes_store.values()
+                           if qr.get('event_id') == event_id and not qr.get('processed')]
+
+    if not unprocessed_qr_codes:
+        return jsonify({'message': 'No unprocessed QR codes', 'processed_count': 0}), 200
+
+    processed_count = 0
+    errors = []
+
+    for qr_code in unprocessed_qr_codes:
+        try:
+            result = groq_service.categorize_and_summarize(qr_code['content'])
+            qr_code['category'] = result.get('category', 'Unknown')
+            qr_code['summary'] = result.get('summary', 'No summary available')
+            qr_code['processed'] = True
+            processed_count += 1
+        except Exception as e:
+            errors.append({'qr_id': qr_code['id'], 'error': str(e)})
+
+    response = {
+        'processed_count': processed_count,
+        'total_unprocessed': len(unprocessed_qr_codes)
+    }
+
+    if errors:
+        response['errors'] = errors
+
+    return jsonify(response), 200
+
+@app.route('/api/events/<event_id>/export', methods=['GET'])
+@jwt_required()
+def export_event(event_id):
+    """Export event QR codes as JSON or CSV"""
+    current_user = get_jwt_identity()
+    export_format = request.args.get('format', 'json')
+
+    if event_id not in events_store:
+        return jsonify({'error': 'Event not found'}), 404
+
+    event = events_store[event_id]
+    if event.get('user_email') != current_user:
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    qr_codes = [qr for qr in qr_codes_store.values() if qr.get('event_id') == event_id]
+
+    if export_format == 'csv':
+        import csv
+        from io import StringIO
+
+        output = StringIO()
+        if qr_codes:
+            fieldnames = ['content', 'category', 'summary', 'scanned_at']
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            for qr in qr_codes:
+                writer.writerow({
+                    'content': qr.get('content', ''),
+                    'category': qr.get('category', ''),
+                    'summary': qr.get('summary', ''),
+                    'scanned_at': qr.get('scanned_at', '')
+                })
+
+        from flask import make_response
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename=event_{event_id}.csv'
+        return response
+    else:
+        return jsonify({'event': event, 'qr_codes': qr_codes}), 200
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({'status': 'healthy'}), 200
+
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
