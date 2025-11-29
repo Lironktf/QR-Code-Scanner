@@ -1,5 +1,5 @@
 // Service Worker for PWA functionality
-const CACHE_NAME = 'qr-scanner-v1';
+const CACHE_NAME = 'qr-scanner-v2'; // Increment version when you deploy updates
 const urlsToCache = [
   '/',
   '/index.html',
@@ -11,7 +11,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('Opened cache');
-      return cache.addAll(urlsToCache);
+      return cache.addAll(urlsToCache).catch(err => {
+        console.log('Cache addAll failed:', err);
+      });
     })
   );
   self.skipWaiting();

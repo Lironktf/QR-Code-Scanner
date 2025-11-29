@@ -7,6 +7,7 @@ const QRScanner = ({ onScan, scannedCount }) => {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState(null);
   const [lastScanned, setLastScanned] = useState(null);
+  const [permissionGranted, setPermissionGranted] = useState(false);
   const html5QrcodeRef = useRef(null);
 
   useEffect(() => {
@@ -99,6 +100,11 @@ const QRScanner = ({ onScan, scannedCount }) => {
         <p className="text-secondary text-center">
           Point your camera at a QR code to scan
         </p>
+        {!permissionGranted && (
+          <p className="text-secondary text-center" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            💡 Tip: Allow camera access in your browser settings for the best experience
+          </p>
+        )}
       </div>
     </div>
   );
