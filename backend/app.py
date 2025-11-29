@@ -15,18 +15,29 @@ app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-chang
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 
 # Configure CORS for production and development
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "http://localhost:5173",  # Local development
-            "http://localhost:3000",
-            "https://*.vercel.app",   # All Vercel deployments
-            "https://*.onrender.com"  # Render previews
-        ],
-        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+# Using regex pattern to allow all Vercel domains
+from flask_cors import cross_origin
+import re
+
+def is_allowed_origin(origin):
+    """Check if origin is allowed"""
+    allowed_patterns = [
+        r'^http://localhost:\d+$',  # Any localhost port
+        r'^http://127\.0\.0\.1:\d+$',  # Any 127.0.0.1 port
+        r'^https://.*\.vercel\.app$',  # Any Vercel domain
+        r'^https://.*\.onrender\.com$',  # Any Render domain
+    ]
+    if not origin:
+        return False
+    return any(re.match(pattern, origin) for pattern in allowed_patterns)
+
+# More flexible CORS configuration
+CORS(app,
+     resources={r"/api/*": {"origins": "*"}},
+     supports_credentials=False,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "DELETE", "OPTIONS"])
+
 jwt = JWTManager(app)
 
 # In-memory user storage (replace with database in production)
