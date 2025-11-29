@@ -19,6 +19,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add response interceptor for better error logging
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error Details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url,
+    });
+    return Promise.reject(error);
+  }
+);
+
 // Auth APIs
 export const authAPI = {
   login: (email, password) => api.post('/auth/login', { email, password }),

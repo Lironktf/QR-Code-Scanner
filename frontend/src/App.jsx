@@ -13,17 +13,17 @@ function App() {
     // Initialize IndexedDB on app load
     initDB();
 
-    // Register service worker for PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered:', registration);
-        })
-        .catch((error) => {
-          console.log('Service Worker registration failed:', error);
-        });
-    }
+    // Register service worker for PWA - Temporarily disabled for debugging
+    // if ('serviceWorker' in navigator) {
+    //   navigator.serviceWorker
+    //     .register('/sw.js')
+    //     .then((registration) => {
+    //       console.log('Service Worker registered:', registration);
+    //     })
+    //     .catch((error) => {
+    //       console.log('Service Worker registration failed:', error);
+    //     });
+    // }
   }, []);
 
   if (loading) {
