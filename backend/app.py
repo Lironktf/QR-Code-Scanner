@@ -14,7 +14,19 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-pro
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
 
-CORS(app)
+# Configure CORS for production and development
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:5173",  # Local development
+            "http://localhost:3000",
+            "https://*.vercel.app",   # All Vercel deployments
+            "https://*.onrender.com"  # Render previews
+        ],
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 jwt = JWTManager(app)
 
 # In-memory user storage (replace with database in production)
