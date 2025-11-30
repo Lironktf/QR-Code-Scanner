@@ -19,29 +19,35 @@ def init_db():
     """Initialize MongoDB connection"""
     global client, db
     try:
-        # Parse connection string to check if it needs additional parameters
+        # Minimal connection params - let PyMongo handle SSL automatically for mongodb+srv://
         connection_params = {
-            'serverSelectionTimeoutMS': 10000,
-            'connectTimeoutMS': 20000,
-            'socketTimeoutMS': 20000,
+            'serverSelectionTimeoutMS': 30000,
+            'connectTimeoutMS': 30000,
+            'socketTimeoutMS': 30000,
         }
 
-        # If using mongodb+srv://, SSL is handled automatically
-        # If not, we need to add SSL parameters manually
-        if not MONGODB_URI.startswith('mongodb+srv://'):
+        # Only add SSL params if NOT using mongodb+srv (which handles it automatically)
+        if MONGODB_URI.startswith('mongodb+srv://'):
+            # For srv, just use tlsCAFile with certifi
+            connection_params['tlsCAFile'] = certifi.where()
+        else:
+            # For regular mongodb://, add full SSL config
             connection_params.update({
                 'tls': True,
                 'tlsCAFile': certifi.where(),
                 'tlsAllowInvalidCertificates': False,
             })
 
+        print(f"Attempting MongoDB connection with {MONGODB_URI.split('@')[0].split('://')[0]}:// protocol...")
         client = MongoClient(MONGODB_URI, **connection_params)
         db = client[DATABASE_NAME]
 
         # Test connection
+        print("Testing connection with ping command...")
         client.admin.command('ping')
 
         # Create indexes for better performance
+        print("Creating database indexes...")
         db.users.create_index('email', unique=True)
         db.events.create_index('user_email')
         db.qr_codes.create_index('event_id')
@@ -51,7 +57,9 @@ def init_db():
         return db
     except Exception as e:
         print(f"✗ MongoDB connection failed: {str(e)}")
-        print(f"Connection string format: {MONGODB_URI.split('@')[0].split('://')[0]}://...")
+        print(f"✗ Connection URI format: {MONGODB_URI.split('@')[0].split('://')[0]}://...")
+        print(f"✗ Database name: {DATABASE_NAME}")
+        print(f"✗ PyMongo version: {__import__('pymongo').version}")
         raise
 
 def get_db():
