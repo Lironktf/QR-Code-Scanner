@@ -2,6 +2,7 @@
 MongoDB Database Configuration and Models
 """
 import os
+import certifi
 from pymongo import MongoClient
 from datetime import datetime
 from bson import ObjectId
@@ -18,8 +19,18 @@ def init_db():
     """Initialize MongoDB connection"""
     global client, db
     try:
-        client = MongoClient(MONGODB_URI)
+        # Use certifi for SSL certificate validation
+        client = MongoClient(
+            MONGODB_URI,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=10000
+        )
         db = client[DATABASE_NAME]
+
+        # Test connection
+        client.admin.command('ping')
 
         # Create indexes for better performance
         db.users.create_index('email', unique=True)
