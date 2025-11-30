@@ -8,13 +8,18 @@ const QRScanner = ({ onScan, scannedCount }) => {
   const [error, setError] = useState(null);
   const [lastScanned, setLastScanned] = useState(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [scanSuccess, setScanSuccess] = useState(false);
   const html5QrcodeRef = useRef(null);
+  const scanTimeoutRef = useRef(null);
 
   useEffect(() => {
     startScanner();
 
     return () => {
       stopScanner();
+      if (scanTimeoutRef.current) {
+        clearTimeout(scanTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -56,16 +61,31 @@ const QRScanner = ({ onScan, scannedCount }) => {
   };
 
   const onScanSuccess = (decodedText, decodedResult) => {
-    // Prevent duplicate scans within 2 seconds
-    if (lastScanned === decodedText) return;
+    // Prevent duplicate scans within 3 seconds
+    const now = Date.now();
+    if (lastScanned && lastScanned.text === decodedText && (now - lastScanned.time) < 3000) {
+      return;
+    }
 
-    setLastScanned(decodedText);
+    // Record this scan
+    setLastScanned({ text: decodedText, time: now });
+
+    // Call parent's onScan handler
     onScan(decodedText);
 
-    // Reset after 2 seconds to allow rescanning
-    setTimeout(() => {
+    // Show green border feedback
+    setScanSuccess(true);
+
+    // Clear any existing timeout
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+
+    // Reset success state and lastScanned after 5 seconds
+    scanTimeoutRef.current = setTimeout(() => {
+      setScanSuccess(false);
       setLastScanned(null);
-    }, 2000);
+    }, 5000);
   };
 
   const onScanError = (errorMessage) => {
@@ -86,7 +106,7 @@ const QRScanner = ({ onScan, scannedCount }) => {
           <>
             <div id="qr-reader" ref={scannerRef}></div>
             <div className="scanner-overlay">
-              <div className="scan-frame"></div>
+              <div className={`scan-frame ${scanSuccess ? 'scan-success' : ''}`}></div>
             </div>
           </>
         )}

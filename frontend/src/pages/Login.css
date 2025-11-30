@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+  background: linear-gradient(-45deg, #000000, #1a0000, #8b0000, #ff0000);
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
   position: relative;
@@ -18,8 +18,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  background: radial-gradient(circle at 20% 50%, rgba(255, 0, 0, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(139, 0, 0, 0.15) 0%, transparent 50%);
   animation: float 20s ease-in-out infinite;
   pointer-events: none;
 }
@@ -46,16 +46,18 @@
 }
 
 .login-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(20, 20, 20, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 1rem;
   padding: 2rem;
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  box-shadow: 0 20px 25px -5px rgba(255, 0, 0, 0.3), 0 8px 10px -6px rgba(255, 0, 0, 0.2);
+  border: 1px solid rgba(255, 0, 0, 0.2);
   position: relative;
   z-index: 1;
   animation: slideUp 0.5s ease-out;
+  color: white;
 }
 
 @keyframes slideUp {
@@ -75,8 +77,13 @@
 }
 
 .login-header h1 {
-  color: var(--primary-color);
+  color: #ff3366;
   margin-bottom: 0.5rem;
+  text-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
+}
+
+.login-header .text-secondary {
+  color: #cccccc;
 }
 
 .login-form {
@@ -93,7 +100,36 @@
 
 .form-group label {
   font-weight: 500;
-  color: var(--text-primary);
+  color: #ffffff;
+}
+
+.form-group input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 51, 102, 0.3);
+  color: white;
+}
+
+.form-group input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.form-group input:focus {
+  border-color: #ff3366;
+  box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.login-card .btn-primary {
+  background-color: #ff3366;
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.login-card .btn-primary:hover {
+  background-color: #ff0040;
+  box-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
 }
 
 .login-toggle {
@@ -103,7 +139,7 @@
 
 .toggle-button {
   background: none;
-  color: var(--primary-color);
+  color: #ff3366;
   font-size: 0.875rem;
   padding: 0.5rem;
   text-decoration: underline;
@@ -112,5 +148,6 @@
 }
 
 .toggle-button:hover {
-  color: var(--primary-dark);
+  color: #ff0040;
+  text-shadow: 0 0 10px rgba(255, 51, 102, 0.5);
 }
