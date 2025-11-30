@@ -19,18 +19,23 @@ def init_db():
     """Initialize MongoDB connection"""
     global client, db
     try:
-        # Use certifi for SSL certificate validation with additional SSL parameters
-        client = MongoClient(
-            MONGODB_URI,
-            tls=True,
-            tlsAllowInvalidCertificates=False,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=10000,
-            connectTimeoutMS=20000,
-            socketTimeoutMS=20000,
-            retryWrites=True,
-            w='majority'
-        )
+        # Parse connection string to check if it needs additional parameters
+        connection_params = {
+            'serverSelectionTimeoutMS': 10000,
+            'connectTimeoutMS': 20000,
+            'socketTimeoutMS': 20000,
+        }
+
+        # If using mongodb+srv://, SSL is handled automatically
+        # If not, we need to add SSL parameters manually
+        if not MONGODB_URI.startswith('mongodb+srv://'):
+            connection_params.update({
+                'tls': True,
+                'tlsCAFile': certifi.where(),
+                'tlsAllowInvalidCertificates': False,
+            })
+
+        client = MongoClient(MONGODB_URI, **connection_params)
         db = client[DATABASE_NAME]
 
         # Test connection
@@ -46,6 +51,7 @@ def init_db():
         return db
     except Exception as e:
         print(f"✗ MongoDB connection failed: {str(e)}")
+        print(f"Connection string format: {MONGODB_URI.split('@')[0].split('://')[0]}://...")
         raise
 
 def get_db():
