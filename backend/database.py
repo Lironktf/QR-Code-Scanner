@@ -19,13 +19,17 @@ def init_db():
     """Initialize MongoDB connection"""
     global client, db
     try:
-        # Use certifi for SSL certificate validation
+        # Use certifi for SSL certificate validation with additional SSL parameters
         client = MongoClient(
             MONGODB_URI,
+            tls=True,
+            tlsAllowInvalidCertificates=False,
             tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=10000,
-            socketTimeoutMS=10000
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=20000,
+            socketTimeoutMS=20000,
+            retryWrites=True,
+            w='majority'
         )
         db = client[DATABASE_NAME]
 
