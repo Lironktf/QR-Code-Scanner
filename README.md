@@ -1,4 +1,4 @@
-# QR Convention Scanner
+# Freshmen Helper
 
 A mobile-optimized Progressive Web App for scanning and organizing QR codes at conventions with AI-powered categorization and summarization using Groq.
 
@@ -175,7 +175,7 @@ For mobile testing:
 
 1. Open the app in Chrome
 2. Click the install icon in the address bar
-3. Or go to Menu → Install QR Convention Scanner
+3. Or go to Menu → Install Freshmen Helper
 
 ## Camera Permissions
 
@@ -349,4 +349,3 @@ For issues or questions:
 ---
 
 Built with React, Flask, and Groq AI
-# QR-Code-Scanner

@@ -1,7 +1,7 @@
 {
-  "name": "QR Convention Scanner",
-  "short_name": "QR Scanner",
-  "description": "Scan and organize QR codes at conventions",
+  "name": "Freshmen Helper",
+  "short_name": "Freshmen Helper",
+  "description": "Freshmen Helper - Scan and organize QR codes at conventions",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

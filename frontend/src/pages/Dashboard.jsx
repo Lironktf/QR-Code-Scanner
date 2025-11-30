@@ -86,7 +86,7 @@ const Dashboard = ({ user, onLogout }) => {
       <div className="dashboard-header">
         <div className="container">
           <div className="flex justify-between items-center">
-            <h1>QR Scanner</h1>
+            <h1>Freshmen Helper</h1>
             <button onClick={onLogout} className="btn btn-secondary">
               Logout
             </button>
@@ -131,9 +131,25 @@ const Dashboard = ({ user, onLogout }) => {
                     e.stopPropagation();
                     deleteEvent(event.id, event.name);
                   }}
-                  className="btn btn-danger event-delete-btn"
+                  className="event-delete-btn"
+                  aria-label="Delete event"
                 >
-                  Delete
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    width="20"
+                    height="20"
+                  >
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
                 </button>
               </div>
             ))}
