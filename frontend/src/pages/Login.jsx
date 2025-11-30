@@ -36,7 +36,7 @@ const Login = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>Freshmen Helper 😍</h1>
+          <h1>😍 Freshmen Helper 😍</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

@@ -86,7 +86,7 @@ const Dashboard = ({ user, onLogout }) => {
       <div className="dashboard-header">
         <div className="container">
           <div className="flex justify-between items-center">
-            <h1>Freshmen Helper 😍</h1>
+            <h1>😍 Freshmen Helper 😍</h1>
             <button onClick={onLogout} className="btn btn-secondary">
               Logout
             </button>
